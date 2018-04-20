@@ -28,6 +28,10 @@ class Configer:
         return self.config.get('path', 'test_path')
 
     @property
+    def step(self):
+        return self.config.getint('data', 'step')
+
+    @property
     def max_len(self):
         return self.config.getint('data', 'max_len')
 
@@ -36,12 +40,44 @@ class Configer:
         return self.config.getfloat('data', 'learning_rate')
 
     @property
+    def dropout(self):
+        return self.config.getint('data', 'dropout')
+
+    @property
+    def embed_dim(self):
+        return self.config.getint('data', 'embed_dim')
+
+    @property
+    def hidden_size(self):
+        return self.config.getint('data', 'hidden_size')
+
+    @property
+    def hidden_layer(self):
+        return self.config.getint('data', 'hidden_layer')
+
+    @property
+    def GRU(self):
+        return self.config.getboolean('data', 'GRU')
+
+    @property
+    def LSTM(self):
+        return self.config.getboolean('data', 'LSTM')
+
+    @property
+    def bidirectional(self):
+        return self.config.getboolean('data', 'bidirectional')
+
+    @property
     def adam(self):
         return self.config.getboolean('data', 'adam')
 
     @property
     def SGD(self):
         return self.config.getboolean('data', 'SGD')
+
+    @property
+    def use_cuda(self):
+        return self.config.getboolean('data', 'use_cuda')
 
     @property
     def train_batch_size(self):

@@ -11,8 +11,14 @@
 @time: 2018/4/16 15:48
 """
 
+import numpy as np
+import torch
 
-a = [1,2,3]
-b = [4,5,6]
-for (i, j) in zip(a,b):
-    print(i, j)
+a = torch.FloatTensor([[[1]], [[3]]])
+print(torch.sum(a))
+
+
+
+
+
+
