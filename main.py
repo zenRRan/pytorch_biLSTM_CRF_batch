@@ -33,6 +33,8 @@ torch.manual_seed(23)
 np.random.seed(23)
 random.seed(23)
 
+def to_scalar(vec):
+    return vec.view(-1).data.tolist()[0]
 def as_minutes(s):
     m = math.floor(s / 60)
     s -= m * 60
@@ -84,6 +86,7 @@ if __name__ == '__main__':
                 text_dic[word] = 1
     text_dic[PADDING] = COUNTS
     text_dic[UNKNOWN] = COUNTS
+    label_dic[START] = COUNTS
     text_alpha.initial(text_dic)
     label_alpha.initial(label_dic)
     print('text_alpha: ', text_alpha.m_size)
@@ -96,6 +99,8 @@ if __name__ == '__main__':
     print('seq2id...')
     label_id_list = seq2id(train_labels, label_alpha)
     text_id_list = seq2id(train_texts, text_alpha)
+    test_label_id_list = seq2id(test_labels, label_alpha)
+    test_text_id_list = seq2id(test_texts, text_alpha)
     print('done, using time:', time.time()-start_time)
     '''
         init model
@@ -125,8 +130,10 @@ if __name__ == '__main__':
     print('train_batch_size:', config.train_batch_size)
     print('test_batch_size:', config.test_batch_size)
 
-    print('create train data...')
-    train_data, batch_num = create_training_data(text_id_list, label_id_list, config)
+    print('create train and test data...')
+    print(text_id_list)
+    train_data, sent_num, batch_num = create_training_data(text_id_list, label_id_list, config)
+    test_data, test_sent_num, test_batch_num = create_training_data(test_text_id_list, test_label_id_list, config)
     print('batch size:', batch_num)
     print('done, using time:', as_minutes(time.time()-start_time))
 
@@ -139,6 +146,7 @@ if __name__ == '__main__':
     '''
     print('begin training in ', as_minutes(time.time()-start_time))
     for Epoch in range(config.step):
+        epoch_loss = 0
         for batch in create_batch(train_data, config.train_batch_size):
             model.train()
             model.zero_grad()
@@ -148,10 +156,29 @@ if __name__ == '__main__':
             train_texts = Variable(torch.LongTensor(train_texts))
             train_labels = Variable(torch.LongTensor(train_labels))
             emit_scores = model(train_texts)
-            score = crf(emit_scores, train_labels)
+            loss = crf(emit_scores, train_labels)
 
+            loss.backward()
+            optimizer.step()
+            # print(loss)
+            epoch_loss += to_scalar(loss)
+            # input()
+        # print(sent_num)
+        if Epoch == 0:
+            continue
+        print('Epoch is {}, average loss is {} ({})'.format(Epoch, (epoch_loss / sent_num),
+                                                              time_since(start_time, Epoch/config.step)))
+        print('Test...')
 
-            input()
+    def eval(texts, labels):
+        model.eval()
+        model.zero_grad()
+        for batch in create_batch(test_data, config.test_batch_size):
+            test_texts, test_labels = prepared_one_batch(batch)
+            test_texts = Variable(torch.LongTensor(test_texts))
+            test_labels = Variable(torch.LongTensor(test_labels))
+            emit_scores = model(test_texts)
+            prediction = ''
 
 
 

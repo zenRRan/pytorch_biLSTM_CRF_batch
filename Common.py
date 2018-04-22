@@ -18,6 +18,7 @@ random.seed(23)
 
 PADDING = 'PADDING'
 UNKNOWN = 'UNKNOWN'
+START = '<start>'
 COUNTS = 10
 
 def seq2id(seqs, word_alpha, padding=False):
@@ -91,9 +92,11 @@ def create_training_data(texts, labels, config):
     else:
         max_length = config.max_len
     train_data = []
+    sent_num = 0
     for _ in range(max_length):
         train_data.append([])
     for (text, label) in zip(texts, labels):
+        sent_num += 1
         ids = len(text) - 1
         train_data[ids].append((text, label))
     data_size = len(texts)
@@ -101,7 +104,7 @@ def create_training_data(texts, labels, config):
     for idx in range(len(train_data)):
         train_size = len(train_data[idx])
         batch_num += int(np.ceil(train_size / config.train_batch_size))
-    return train_data, batch_num
+    return train_data, sent_num, batch_num
 
 def prepared_one_batch(batch):
     train_texts = []

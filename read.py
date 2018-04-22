@@ -16,7 +16,7 @@ class Reader:
         self.text = []
         self.label = []
         with open(path, 'r', encoding='utf8') as f:
-            lines = f.readlines()
+            lines = f.readlines()[:392]
             text_inst = []
             label_inst = []
             for line in lines:

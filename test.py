@@ -14,8 +14,11 @@
 import numpy as np
 import torch
 
-a = torch.FloatTensor([[[1]], [[3]]])
-print(torch.sum(a))
+a = torch.FloatTensor([[[1,1,3]], [[1,2,0]]])
+b = [1, 2, 3, 4]
+# print(a[1, :])
+print(a.size())
+print(torch.max(a, dim=2))
 
 
 
