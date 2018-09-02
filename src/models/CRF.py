@@ -134,11 +134,72 @@ class CRF(nn.Module):
         # print('total_score:', total_score.sum().size())
         return total_score.sum()
 
-    def biterbi_decoder(self, emit_scores):
+    def biterbi_decoder(self, emit_scores, masks):
         '''
         :param emit_scores: Variable(sent_size, batch, label_num)
         :return:
         '''
         sent_size = emit_scores.size(0)
         batch_size = emit_scores.size(1)
+
+        ##prepare...
+        emit_scores_broadcast = emit_scores[0].view(batch_size, self.label_num)
+        trans_scores_broadcast = self.T[self.label_alpha.string2id[START], :].unsqueeze(0).expend(batch_size, self.label_num)
+        forward_scores = emit_scores_broadcast + trans_scores_broadcast
+        ### forward_scores: Variable(batch_size, label_num)
+
+        ##calculate the back path
+        back_path = []
+
+        for idx in range(1, sent_size):
+            emit_scores_broadcast = emit_scores[idx].view(batch_size, self.label_num).unsqueeze(1).view(batch_size, 1, self.label_num).expend(batch_size, self.label_num, self.label_num)
+            trans_scores_broadcast = self.T.view(self.label_num, self.label_num).unsqueeze(0).view(1, self.label_num, self.label_num).expend(batch_size, self.label_num, self.label_num)
+            forward_scores_broadcast = forward_scores.view(batch_size, self.label_num).unsqueeze(2).view(batch_size, self.label_num, 1).expend(batch_size, self.label_num, self.label_num).clone()
+            scores = emit_scores_broadcast + trans_scores_broadcast + forward_scores
+            ##scores:Variable(batch_size, self.label_num, self.label_num)
+
+            max_scores, max_indexs = torch.max(scores, dim=1)
+
+            ##max_indexs:Variable(batch_size, self.label_num)
+            back_path.append(max_indexs.data.tolist())
+
+        back_path.append([[self.label_alpha.string2id[PADDING]] * self.label_num for _ in range(batch_size)])
+        back_path = Variable(torch.LongTensor(back_path)).transpose(0, 1)
+
+        if self.use_cuda:
+            back_path = back_path.cuda()
+
+        ## calculate end transition scores
+        end_trans_broadcast = self.T[:, self.label_alpha.string2id[PADDING]].unsqueeze(0).expend(batch_size, self.label_num)
+        forward_scores_broadcast = forward_scores.view(batch_size, self.label_num)
+
+        ends_scores = end_trans_broadcast + forward_scores_broadcast
+
+        max_scores, max_ends_indexs = torch.max(ends_scores, dim=1)
+        ## max_ends_indexs:Variable(batch_size)
+
+        ##calculate predict path
+        ends_max_indexs_broadcast = max_ends_indexs.unsqueeze(1).expend(batch_size, self.label_num)
+        batch_length = torch.sum(masks, dim=0).long().unsqueeze(1)
+        ends_position = batch_length.expend(batch_size, self.label_num)
+
+        back_path.scatter_(1, ends_position.view(batch_size, self.label_num).unsqueeze(1), ends_max_indexs_broadcast.contiguous().view(batch_size, self.label_num).unsqueeze(1))
+        ## batch_path: Variable(batch_size, seq_length, self.label_num)
+
+        back_path = back_path.transpose(0, 1)
+        ## batch_path: Variable(batch_size, seq_length, self.label_num)
+
+        decode_path = Variable(torch.zeros(sent_size, batch_size))
+        decode_path[-1] = max_ends_indexs
+
+        for idx in range(sent_size-2, -1, -1):
+            max_ends_indexs = torch.gather(back_path[idx], 1, max_ends_indexs.unsqueeze(1).view(batch_size, 1))
+            decode_path[idx] = max_ends_indexs
+
+        return decode_path
+
+
+
+
+
 

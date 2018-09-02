@@ -131,7 +131,6 @@ if __name__ == '__main__':
     print('test_batch_size:', config.test_batch_size)
 
     print('create train and test data...')
-    print(text_id_list)
     train_data, sent_num, batch_num = create_training_data(text_id_list, label_id_list, config)
     test_data, test_sent_num, test_batch_num = create_training_data(test_text_id_list, test_label_id_list, config)
     print('batch size:', batch_num)
@@ -157,7 +156,8 @@ if __name__ == '__main__':
             train_labels = Variable(torch.LongTensor(train_labels))
             emit_scores = model(train_texts)
             loss = crf(emit_scores, train_labels)
-
+            a = crf.viterbi_decoder(emit_scores)
+            input()
             loss.backward()
             optimizer.step()
             # print(loss)
@@ -178,7 +178,9 @@ if __name__ == '__main__':
             test_texts = Variable(torch.LongTensor(test_texts))
             test_labels = Variable(torch.LongTensor(test_labels))
             emit_scores = model(test_texts)
-            prediction = ''
+            prediction = crf.viterbi_decoder(emit_scores)
+
+
 
 
 
